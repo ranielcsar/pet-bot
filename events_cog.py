@@ -29,11 +29,11 @@ from discord.ext import commands, tasks
 
 
 # ── Configuração ──────────────────────────────────────────────────────────────
-TIMEZONE             = zoneinfo.ZoneInfo("America/Sao_Paulo")
-DB_PATH              = "events.db"
+TIMEZONE = zoneinfo.ZoneInfo("America/Sao_Paulo")
+DB_PATH = "events.db"
 
 DAILY_REMINDER_TIMES = [
-    datetime.time(8,  0, tzinfo=TIMEZONE),
+    datetime.time(8, 0, tzinfo=TIMEZONE),
     datetime.time(14, 0, tzinfo=TIMEZONE),
     datetime.time(20, 0, tzinfo=TIMEZONE),
 ]
@@ -49,7 +49,7 @@ class Event:
     id: str
     name: str
     date: datetime.date
-    time: datetime.time          # obrigatório
+    time: datetime.time  # obrigatório
     description: str
     channel_id: int
     created_by: int
@@ -66,9 +66,9 @@ class Event:
         return (self.date - datetime.date.today()).days
 
     def is_event_week(self) -> bool:
-        today      = datetime.date.today()
+        today = datetime.date.today()
         week_start = today - datetime.timedelta(days=today.weekday())
-        week_end   = week_start + datetime.timedelta(days=6)
+        week_end = week_start + datetime.timedelta(days=6)
         return week_start <= self.date <= week_end
 
     def is_today(self) -> bool:
@@ -82,18 +82,20 @@ class Event:
         Horários fixos permitidos no dia do evento.
         O último fixo que caberia é removido — substituído pelo '2h antes'.
         """
-        fixed  = [datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
+        fixed = [datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
         before = [t for t in fixed if t < self.time]
         if not before:
-            return []       # evento antes das 10h: nenhum fixo cabe
-        before.pop()        # remove o último (cedido ao "2h antes")
+            return []  # evento antes das 10h: nenhum fixo cabe
+        before.pop()  # remove o último (cedido ao "2h antes")
         return before
 
     def two_hours_before(self) -> datetime.datetime:
         event_dt = datetime.datetime.combine(self.date, self.time, tzinfo=TIMEZONE)
         return event_dt - datetime.timedelta(hours=2)
 
-    def reminder_embed(self, bot: commands.Bot, label: Optional[str] = None) -> discord.Embed:
+    def reminder_embed(
+        self, bot: commands.Bot, label: Optional[str] = None
+    ) -> discord.Embed:
         days = self.days_until()
         if days == 0:
             when, color = "**HOJE!** 🎉", discord.Color.red()
@@ -109,8 +111,8 @@ class Event:
             description=self.description,
             color=color,
         )
-        embed.add_field(name="📆 Data",  value=self.formatted_datetime(), inline=True)
-        embed.add_field(name="⏳ Falta", value=when,                      inline=True)
+        embed.add_field(name="📆 Data", value=self.formatted_datetime(), inline=True)
+        embed.add_field(name="⏳ Falta", value=when, inline=True)
         embed.set_footer(text=f"ID do evento: {self.id}")
         return embed
 
@@ -144,7 +146,7 @@ class Event:
 class EventsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.events: dict[str, Event] = {}   # cache em memória
+        self.events: dict[str, Event] = {}  # cache em memória
 
     async def cog_load(self):
         await self._init_db()
@@ -162,7 +164,8 @@ class EventsCog(commands.Cog):
 
     async def _init_db(self):
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS events (
                     id          TEXT PRIMARY KEY,
                     name        TEXT NOT NULL,
@@ -172,7 +175,8 @@ class EventsCog(commands.Cog):
                     channel_id  INTEGER NOT NULL,
                     created_by  INTEGER NOT NULL
                 )
-            """)
+            """
+            )
             await db.commit()
 
     async def _load_events(self):
@@ -188,7 +192,9 @@ class EventsCog(commands.Cog):
 
     async def _save_event(self, event: Event):
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?)", event.to_row())
+            await db.execute(
+                "INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?)", event.to_row()
+            )
             await db.commit()
 
     async def _delete_event_db(self, event_id: str):
@@ -213,9 +219,13 @@ class EventsCog(commands.Cog):
             try:
                 channel = await self.bot.fetch_channel(event.channel_id)
             except discord.NotFound:
-                print(f"⚠️  Canal {event.channel_id} não encontrado para '{event.name}'.")
+                print(
+                    f"⚠️  Canal {event.channel_id} não encontrado para '{event.name}'."
+                )
                 return
-        await channel.send(content="@everyone", embed=event.reminder_embed(self.bot, label=label))
+        await channel.send(
+            content="@everyone", embed=event.reminder_embed(self.bot, label=label)
+        )
 
     # ── Tasks ─────────────────────────────────────────────────────────────────
 
@@ -234,7 +244,9 @@ class EventsCog(commands.Cog):
     async def daily_task(self):
         """Lembretes fixos (08h, 14h, 20h) na semana do evento."""
         self._purge_past_events()
-        now_time = datetime.datetime.now(tz=TIMEZONE).time().replace(second=0, microsecond=0)
+        now_time = (
+            datetime.datetime.now(tz=TIMEZONE).time().replace(second=0, microsecond=0)
+        )
         for event in list(self.events.values()):
             if not event.is_event_week():
                 continue
@@ -254,7 +266,9 @@ class EventsCog(commands.Cog):
                 continue
             two_before = event.two_hours_before().replace(second=0, microsecond=0)
             if now == two_before:
-                await self._send_reminder(event, label=f"⏰ 2 horas para o evento — {event.name}")
+                await self._send_reminder(
+                    event, label=f"⏰ 2 horas para o evento — {event.name}"
+                )
 
     @weekly_task.before_loop
     @daily_task.before_loop
@@ -275,7 +289,9 @@ class EventsCog(commands.Cog):
         description="Gerenciamento de eventos com lembretes automáticos.",
     )
 
-    @evento_group.command(name="adicionar", description="Registra um novo evento para ser lembrado.")
+    @evento_group.command(
+        name="adicionar", description="Registra um novo evento para ser lembrado."
+    )
     @app_commands.describe(
         nome="Nome do evento",
         data="Data no formato DD/MM/AAAA (ex: 30/03/2026)",
@@ -317,7 +333,8 @@ class EventsCog(commands.Cog):
             event_time = datetime.datetime.strptime(horario.strip(), "%H:%M").time()
         except ValueError:
             await interaction.response.send_message(
-                "❌ Horário inválido. Ex: `14:30`", ephemeral=True,
+                "❌ Horário inválido. Ex: `14:30`",
+                ephemeral=True,
             )
             return
 
@@ -342,16 +359,23 @@ class EventsCog(commands.Cog):
         await self._save_event(event)
         self.events[event_id] = event
 
-        fixos     = event.daily_reminders_today() if event.is_today() else [
-                        datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
+        fixos = (
+            event.daily_reminders_today()
+            if event.is_today()
+            else [datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
+        )
         fixos_str = ", ".join(t.strftime("%H:%M") for t in fixos) if fixos else "nenhum"
         dois_antes = event.two_hours_before().strftime("%H:%M")
 
-        embed = discord.Embed(title="✅ Evento registrado!", color=discord.Color.green())
-        embed.add_field(name="📌 Nome",   value=nome,                         inline=False)
-        embed.add_field(name="📆 Data",   value=event.formatted_datetime(),   inline=True)
-        embed.add_field(name="⏳ Faltam", value=f"{event.days_until()} dias", inline=True)
-        embed.add_field(name="📣 Canal",  value=canal.mention,                inline=True)
+        embed = discord.Embed(
+            title="✅ Evento registrado!", color=discord.Color.green()
+        )
+        embed.add_field(name="📌 Nome", value=nome, inline=False)
+        embed.add_field(name="📆 Data", value=event.formatted_datetime(), inline=True)
+        embed.add_field(
+            name="⏳ Faltam", value=f"{event.days_until()} dias", inline=True
+        )
+        embed.add_field(name="📣 Canal", value=canal.mention, inline=True)
         embed.add_field(
             name="🔔 Lembretes",
             value=(
@@ -364,7 +388,9 @@ class EventsCog(commands.Cog):
         embed.set_footer(text=f"ID: {event_id} • Use /evento listar para ver todos.")
         await interaction.response.send_message(embed=embed)
 
-    @evento_group.command(name="listar", description="Lista todos os eventos registrados.")
+    @evento_group.command(
+        name="listar", description="Lista todos os eventos registrados."
+    )
     async def evento_listar(self, interaction: discord.Interaction):
         self._purge_past_events()
         if not self.events:
@@ -373,7 +399,9 @@ class EventsCog(commands.Cog):
                 ephemeral=True,
             )
             return
-        embed = discord.Embed(title="📅 Eventos Registrados", color=discord.Color.blurple())
+        embed = discord.Embed(
+            title="📅 Eventos Registrados", color=discord.Color.blurple()
+        )
         for ev in sorted(self.events.values(), key=lambda e: (e.date, e.time)):
             semana_label = " 🚨 **(ESTA SEMANA)**" if ev.is_event_week() else ""
             embed.add_field(
@@ -394,7 +422,8 @@ class EventsCog(commands.Cog):
         event = self.events.get(evento_id)
         if event is None:
             await interaction.response.send_message(
-                f"❌ Evento com ID `{evento_id}` não encontrado.", ephemeral=True,
+                f"❌ Evento com ID `{evento_id}` não encontrado.",
+                ephemeral=True,
             )
             return
         await self._delete_event_db(evento_id)
@@ -403,10 +432,193 @@ class EventsCog(commands.Cog):
             f"🗑️ Evento **{event.name}** (`{evento_id}`) removido com sucesso."
         )
 
-    @evento_group.command(name="testar", description="Força o envio imediato de lembretes (para testes).")
+    @evento_group.command(
+        name="editar", description="Edita um evento existente que ainda vai acontecer."
+    )
+    @app_commands.describe(
+        evento_id="ID do evento (obtido em /evento listar)",
+        nome="Novo nome do evento (opcional)",
+        data="Nova data no formato DD/MM/AAAA (opcional)",
+        horario="Novo horário no formato HH:MM (opcional)",
+        descricao="Nova descrição do evento (opcional)",
+        canal="Novo canal para os lembretes (opcional)",
+    )
+    async def evento_editar(
+        self,
+        interaction: discord.Interaction,
+        evento_id: str,
+        nome: Optional[str] = None,
+        data: Optional[str] = None,
+        horario: Optional[str] = None,
+        descricao: Optional[str] = None,
+        canal: Optional[discord.TextChannel] = None,
+    ):
+        # Verifica se o evento existe
+        event = self.events.get(evento_id)
+        if event is None:
+            await interaction.response.send_message(
+                f"❌ Evento com ID `{evento_id}` não encontrado ou já aconteceu.",
+                ephemeral=True,
+            )
+            return
+
+        # Verifica se o evento ainda não aconteceu
+        if event.is_past():
+            await interaction.response.send_message(
+                f"❌ Evento **{event.name}** já aconteceu em {event.formatted_datetime()}. Não é possível editar eventos passados.",
+                ephemeral=True,
+            )
+            return
+
+        # Valida e aplica as alterações
+        nova_data = event.date
+        novo_horario = event.time
+        novo_nome = nome if nome is not None else event.name
+        nova_descricao = descricao if descricao is not None else event.description
+        novo_canal_id = canal.id if canal is not None else event.channel_id
+
+        # Processa a nova data se fornecida
+        if data is not None:
+            if not DATE_PATTERN.match(data.strip()):
+                await interaction.response.send_message(
+                    "❌ Formato de data inválido. Use **DD/MM/AAAA** — ex: `30/03/2026`",
+                    ephemeral=True,
+                )
+                return
+            try:
+                nova_data = datetime.datetime.strptime(data.strip(), "%d/%m/%Y").date()
+            except ValueError:
+                await interaction.response.send_message(
+                    "❌ Data inválida (dia ou mês fora do intervalo). Ex: `30/03/2026`",
+                    ephemeral=True,
+                )
+                return
+
+        # Processa o novo horário se fornecido
+        if horario is not None:
+            if not TIME_PATTERN.match(horario.strip()):
+                await interaction.response.send_message(
+                    "❌ Formato de horário inválido. Use **HH:MM** — ex: `14:30`",
+                    ephemeral=True,
+                )
+                return
+            try:
+                novo_horario = datetime.datetime.strptime(
+                    horario.strip(), "%H:%M"
+                ).time()
+            except ValueError:
+                await interaction.response.send_message(
+                    "❌ Horário inválido. Ex: `14:30`",
+                    ephemeral=True,
+                )
+                return
+
+        # Verifica se o novo horário é futuro
+        novo_evento_dt = datetime.datetime.combine(
+            nova_data, novo_horario, tzinfo=TIMEZONE
+        )
+        if novo_evento_dt <= datetime.datetime.now(tz=TIMEZONE):
+            await interaction.response.send_message(
+                "❌ O evento com os novos dados já teria passado! Informe uma data e horário futuros.",
+                ephemeral=True,
+            )
+            return
+
+        # Cria o evento atualizado
+        event_atualizado = Event(
+            id=event.id,
+            name=novo_nome,
+            date=nova_data,
+            time=novo_horario,
+            description=nova_descricao,
+            channel_id=novo_canal_id,
+            created_by=event.created_by,
+        )
+
+        # Atualiza no banco de dados
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "UPDATE events SET name = ?, date = ?, time = ?, description = ?, channel_id = ? WHERE id = ?",
+                (
+                    novo_nome,
+                    nova_data.isoformat(),
+                    novo_horario.strftime("%H:%M"),
+                    nova_descricao,
+                    novo_canal_id,
+                    evento_id,
+                ),
+            )
+            await db.commit()
+
+        # Atualiza o cache
+        self.events[evento_id] = event_atualizado
+
+        # Prepara a mensagem de confirmação
+        alteracoes = []
+        if nome is not None:
+            alteracoes.append(f"📌 Nome: **{event.name}** → **{novo_nome}**")
+        if data is not None or horario is not None:
+            alteracoes.append(
+                f"📆 Data/Hora: **{event.formatted_datetime()}** → **{event_atualizado.formatted_datetime()}**"
+            )
+        if descricao is not None:
+            alteracoes.append(f"📝 Descrição alterada")
+        if canal is not None:
+            alteracoes.append(f"📣 Canal: <#{event.channel_id}> → {canal.mention}")
+
+        # Calcula os novos lembretes
+        fixos = (
+            event_atualizado.daily_reminders_today()
+            if event_atualizado.is_today()
+            else [datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
+        )
+        fixos_str = ", ".join(t.strftime("%H:%M") for t in fixos) if fixos else "nenhum"
+        dois_antes = event_atualizado.two_hours_before().strftime("%H:%M")
+
+        embed = discord.Embed(title="✏️ Evento atualizado!", color=discord.Color.gold())
+        embed.add_field(name="🆔 ID", value=evento_id, inline=False)
+        embed.add_field(name="📌 Nome", value=novo_nome, inline=False)
+        embed.add_field(
+            name="📆 Data/Hora",
+            value=event_atualizado.formatted_datetime(),
+            inline=True,
+        )
+        embed.add_field(
+            name="⏳ Faltam", value=f"{event_atualizado.days_until()} dias", inline=True
+        )
+        embed.add_field(
+            name="📣 Canal",
+            value=canal.mention if canal else f"<#{event.channel_id}>",
+            inline=True,
+        )
+        embed.add_field(
+            name="🔔 Lembretes (atualizados)",
+            value=(
+                f"• **Semanal** — toda semana no mesmo dia às 09:00\n"
+                f"• **Diário** — na semana do evento: {fixos_str}\n"
+                f"• **2h antes** — no dia do evento às {dois_antes}"
+            ),
+            inline=False,
+        )
+
+        if alteracoes:
+            embed.add_field(
+                name="✅ Alterações realizadas",
+                value="\n".join(alteracoes),
+                inline=False,
+            )
+
+        embed.set_footer(text="Use /evento listar para ver todos os eventos.")
+        await interaction.response.send_message(embed=embed)
+
+    @evento_group.command(
+        name="testar", description="Força o envio imediato de lembretes (para testes)."
+    )
     async def evento_testar(self, interaction: discord.Interaction):
         if not self.events:
-            await interaction.response.send_message("Nenhum evento para testar.", ephemeral=True)
+            await interaction.response.send_message(
+                "Nenhum evento para testar.", ephemeral=True
+            )
             return
         await interaction.response.defer(ephemeral=True)
         for event in self.events.values():
