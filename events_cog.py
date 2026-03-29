@@ -19,6 +19,7 @@ import uuid
 import re
 import datetime
 import zoneinfo
+import os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -30,7 +31,8 @@ from discord.ext import commands, tasks
 
 # ── Configuração ──────────────────────────────────────────────────────────────
 TIMEZONE = zoneinfo.ZoneInfo("America/Sao_Paulo")
-DB_PATH = "events.db"
+os.makedirs("data", exist_ok=True)
+DB_PATH = "data/events.db"
 
 DAILY_REMINDER_TIMES = [
     datetime.time(8, 0, tzinfo=TIMEZONE),
