@@ -37,17 +37,3 @@ Altere `TIMEZONE` em `events_cog.py`:
 ```python
 TIMEZONE = zoneinfo.ZoneInfo("America/Sao_Paulo")
 ```
-
-## Migração para SQLite (futuro)
-Substituir o dict `self.events` por chamadas a um banco SQLite.
-A estrutura da tabela sugerida:
-```sql
-CREATE TABLE events (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    date        TEXT NOT NULL,   -- formato ISO: YYYY-MM-DD
-    description TEXT,
-    channel_id  INTEGER NOT NULL,
-    created_by  INTEGER NOT NULL
-);
-```
