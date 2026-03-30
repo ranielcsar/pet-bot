@@ -410,11 +410,11 @@ class EventsCog(commands.Cog):
         for ev in sorted(self.events.values(), key=lambda e: (e.date, e.time)):
             semana_label = " 🚨 **(ESTA SEMANA)**" if ev.is_event_week() else ""
             embed.add_field(
-                name=f"{ev.name}{semana_label}",
+                name=f"\n{ev.name}{semana_label}",
                 value=(
-                    f"📆 {ev.formatted_datetime()} · ⏳ {ev.days_until()} dias\n"
-                    f"\n{ev.description}\n\n"
-                    f"📣 <#{ev.channel_id}> · 🆔 `{ev.id}`\n"
+                    f"{ev.description}\n"
+                    f"\n📆 {ev.formatted_datetime()} · ⏳ {ev.days_until()} dias\n"
+                    f"📣 <#{ev.channel_id}> · 🆔 `{ev.id}`\n\n"
                 ),
                 inline=False,
             )
