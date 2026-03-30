@@ -35,9 +35,9 @@ os.makedirs("data", exist_ok=True)
 DB_PATH = "data/events.db"
 
 DAILY_REMINDER_TIMES = [
-    datetime.time(8, 0, tzinfo=TIMEZONE),
-    datetime.time(14, 0, tzinfo=TIMEZONE),
-    datetime.time(20, 0, tzinfo=TIMEZONE),
+    datetime.time(9, 0, tzinfo=TIMEZONE),
+    datetime.time(13, 0, tzinfo=TIMEZONE),
+    datetime.time(19, 0, tzinfo=TIMEZONE),
 ]
 WEEKLY_REMINDER_TIME = datetime.time(9, 0, tzinfo=TIMEZONE)
 
@@ -84,7 +84,7 @@ class Event:
         Horários fixos permitidos no dia do evento.
         O último fixo que caberia é removido — substituído pelo '2h antes'.
         """
-        fixed = [datetime.time(8, 0), datetime.time(14, 0), datetime.time(20, 0)]
+        fixed = [datetime.time(9, 0), datetime.time(13, 0), datetime.time(19, 0)]
         before = [t for t in fixed if t < self.time]
         if not before:
             return []  # evento antes das 10h: nenhum fixo cabe
@@ -114,7 +114,10 @@ class Event:
             color=color,
         )
         embed.add_field(name="📆 Data", value=self.formatted_datetime(), inline=True)
-        embed.add_field(name="⏳ Falta", value=when, inline=True)
+        if days <= 1:
+            embed.add_field(name=when, value="\u200b", inline=True)
+        else:
+            embed.add_field(name="⏳ Falta", value=when, inline=True)
         embed.set_footer(text=f"ID do evento: {self.id}")
         return embed
 
@@ -244,7 +247,7 @@ class EventsCog(commands.Cog):
 
     @tasks.loop(time=DAILY_REMINDER_TIMES)
     async def daily_task(self):
-        """Lembretes fixos (08h, 14h, 20h) na semana do evento."""
+        """Lembretes fixos (09h, 13h, 19h) na semana do evento."""
         self._purge_past_events()
         now_time = (
             datetime.datetime.now(tz=TIMEZONE).time().replace(second=0, microsecond=0)
@@ -410,8 +413,8 @@ class EventsCog(commands.Cog):
                 name=f"{ev.name}{semana_label}",
                 value=(
                     f"📆 {ev.formatted_datetime()} · ⏳ {ev.days_until()} dias\n"
+                    f"\n{ev.description}\n\n"
                     f"📣 <#{ev.channel_id}> · 🆔 `{ev.id}`\n"
-                    f"{ev.description}"
                 ),
                 inline=False,
             )
