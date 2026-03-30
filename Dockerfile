@@ -1,22 +1,31 @@
-app = "pet-bot"
+FROM python:3.11-slim
 
-primary_region = "gru"
+WORKDIR /app
 
-build = "."
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-[[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
-  cpus = 1
+# Apenas as dependências essenciais
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libffi-dev \
+        libssl-dev \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-[env]
-  TZ = "America/Sao_Paulo"
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-[mounts]
-  source = "data"
-  destination = "/app/data"
+COPY events_cog.py main.py ./
 
-[experimental]
-  cmd = ["python", "main.py"]
+# Cria diretório data e ajusta permissões
+RUN mkdir -p /app/data && \
+    adduser --disabled-password --gecos "" botuser && \
+    chown -R botuser:botuser /app
 
-# Sem health check - o Fly.io só mantém o processo rodando
+USER botuser
+
+# Comando simples para rodar o bot
+CMD ["python", "main.py"]

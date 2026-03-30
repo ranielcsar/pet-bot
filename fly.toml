@@ -2,7 +2,13 @@ app = "pet-bot"
 
 primary_region = "gru"
 
-build = "."
+[http_service]
+  internal_port = 8080
+  force_https = false
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
 
 [[vm]]
   memory = "256mb"
@@ -16,7 +22,5 @@ build = "."
   source = "data"
   destination = "/app/data"
 
-[experimental]
-  cmd = ["python", "main.py"]
-
-# Sem health check - o Fly.io só mantém o processo rodando
+[processes]
+  app = "python main.py"
